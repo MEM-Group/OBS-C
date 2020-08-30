@@ -27,7 +27,7 @@ longarray.cmx longarray.cmi: errormsg.cmx
 growArray.cmx growArray.cmi: errormsg.cmx longarray.cmx
 cabshelper.cmx cabshelper.cmi: errormsg.cmx growArray.cmx cabs.cmx
 cparser.cmx: cabs.cmx cabshelper.cmx lexerhack.cmx cparser.cmi
-cabsDriver.cmx cabsDriver.cmi: cparser.cmx frontc.cmx clexer.cmx kPrinter.cmx
+cabsDriver.cmx cabsDriver.cmi: cparser.cmx frontc.cmx clexer.cmx kPrinter.cmx trans.cmx
 frontc.cmx frontc.cmi: errormsg.cmx whitetrack.cmx clexer.cmx
 clexer.cmx clexer.cmi: lexerhack.cmx cparser.cmx cabshelper.cmx
 kPrinter.cmx kPrinter.cmi: cabs.cmx escape.cmx
