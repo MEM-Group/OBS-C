@@ -31,6 +31,8 @@ cabsDriver.cmx cabsDriver.cmi: cparser.cmx frontc.cmx clexer.cmx kPrinter.cmx
 frontc.cmx frontc.cmi: errormsg.cmx whitetrack.cmx clexer.cmx
 clexer.cmx clexer.cmi: lexerhack.cmx cparser.cmx cabshelper.cmx
 kPrinter.cmx kPrinter.cmi: cabs.cmx escape.cmx
+trans.cmx trans.cmi: cabs.cmx
+
 
 %.cmx: %.ml 
 	@$(OCAML_COMPILE) $*.ml
@@ -53,6 +55,7 @@ cparser: errormsg.cmx \
          cparser.cmx \
          frontc.cmx \
          kPrinter.cmx \
+         trans.cmx \
          cabsDriver.cmx
 	$(OCAML_LINK) -o $@ str.cmxa $^
 	@-strip cparser

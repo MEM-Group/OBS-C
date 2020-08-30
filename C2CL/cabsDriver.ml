@@ -48,6 +48,11 @@ module E = Errormsg
 open Printf
 open KPrinter
 
+open Trans
+
+
+
+
 type outfile = 
     { fname: string;
       fchan: out_channel } 
@@ -137,8 +142,12 @@ let theMain () =
 		if !E.hadErrors then
 			E.s ("Error: Cabs2cil had some errors");
 				
-		(* process the CIL file (merged if necessary) *)
-		processOneFile one
+			(* process the CIL file (merged if necessary) *)
+		(* modified by Shuanglong *)
+		(* processOneFile one *)
+		let (_,defs) = one in
+		print_string (translation defs) 
+		
 	end
 ;;
                                         (* Define a wrapper for main to 
@@ -160,4 +169,9 @@ begin
 end;
 cleanup ();
 exit (if !failed then 1 else 0)
+
+
+
+
+
 
