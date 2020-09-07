@@ -62,4 +62,4 @@ cparser: errormsg.cmx \
 
 .PHONY: clean
 clean:
-	-rm -f *.cmi *.cmx *.o *.mli *.cil cparser.ml clexer.ml *.preprocessed cparser *.stackdump
+	-rm -f *.cmi *.cmx *.o *.mli *.cil cparser.ml clexer.ml *.preprocessed cparser *.stackdump *~

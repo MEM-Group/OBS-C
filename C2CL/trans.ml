@@ -1,47 +1,68 @@
 
 open Cabs
 
-let structSize: ((string * int) list) ref = ref [];;
+
+exception Undefine of string
 
 let rec structsize (s: (string * int) list) na = match s with 
       [] -> 0
     | (na,n) :: res -> n
     | (na1,n) :: res -> structsize res na
 
-(**** translating expression ****)
+let rec print_structsize (l: (string * int) list) = match l with
+      [] -> print_newline ()
+    | (s,n) :: res -> print_string s; print_string ": "; print_int n; print_newline (); print_structsize res
 
-let processFname (fname:expression) (args:expression list) = 
+let tranFname (fname:expression) = 
     match fname with
-      LOCEXP (e,_) -> (match e with 
-                        VARIABLE "malloc" -> "allocateInit"
-                      | VARIABLE "sizeof" -> (match args with [arg] -> (
-                                                 match arg with LOCEXP (e,_) -> 
-                                                   (match e with VARIABLE v -> (string_of_int (structsize (!structSize) v)) | _ -> "0") | _ -> "0"
-                                              )
-                                              | _ -> "")
-                      | _ -> "" )
-    | _ -> "xx"
-             
-let rec tranExps (es:expression list) = match es with
-      [] -> ""
-    | [e] -> (tranExp e)
-    | e::res -> (tranExp e) ^ ", " ^ (tranExps res)
+      LOCEXP (e,_) ->  (match e with 
+                          VARIABLE "malloc" -> "allocateInit"
+                        |  _ -> "" )
+    | _ -> ""
 
-and  tranExp (e:expression) = match e with
-      BINARY (ASSIGN, e1, e2) -> ((tranExp e1)^":="^(tranExp e2))
-    | BINARY (ADD, e1, e2) -> ((tranExp e1) ^ "+" ^ (tranExp e2))
-    | BINARY (SUB, e1, e2) -> ((tranExp e1) ^ "-" ^ (tranExp e2))
-    | BINARY (MUL, e1, e2) -> ((tranExp e1) ^ "*" ^ (tranExp e2))
-    | BINARY (DIV, e1, e2) -> ((tranExp e1) ^ "/" ^ (tranExp e2))
-    | BINARY (MOD, e1, e2) -> ((tranExp e1) ^ "mod" ^ (tranExp e2))
-    | LOCEXP (e,_) ->(match e with  
-                        VARIABLE v -> v
-                      | _ -> "")
+let tranInitName (itn:init_name) = match itn with
+      (name,ie) -> match name with (n,_,_,_) -> ("let " ^ n ^ ";") 
+
+let rec tranInitNames (itns:init_name list) = match itns with
+      [] -> ""
+    | fi :: ritns -> (tranInitName fi) ^ (tranInitNames ritns)
+
+let rec tranDfn dfn = match dfn with
+    (* (statement) -> block -> block_element_list -> declaration ->
+       decl_spec_list ->  *)
+      DECDEF (ing,_) -> match ing with 
+                        (_,il) -> tranInitNames il
+    | _ -> raise (Undefine "tranDfn")
+                 
+             
+let rec tranExps (es:expression list) sinfo = match es with
+      [] -> ""
+    | [e] -> (tranExp e sinfo)
+    | e::res -> (tranExp e sinfo) ^ ", " ^ (tranExps res sinfo)
+and  tranExp (e:expression) sinfo = match e with
+      BINARY (ASSIGN, e1, e2) -> ((tranExp e1 sinfo)^":="^(tranExp e2 sinfo))
+    | BINARY (ADD, e1, e2) -> ((tranExp e1 sinfo) ^ "+" ^ (tranExp e2 sinfo))
+    | BINARY (SUB, e1, e2) -> ((tranExp e1 sinfo) ^ "-" ^ (tranExp e2 sinfo))
+    | BINARY (MUL, e1, e2) -> ((tranExp e1 sinfo) ^ "*" ^ (tranExp e2 sinfo))
+    | BINARY (DIV, e1, e2) -> ((tranExp e1 sinfo) ^ "/" ^ (tranExp e2 sinfo))
+    | BINARY (MOD, e1, e2) -> ((tranExp e1 sinfo) ^ "mod" ^ (tranExp e2 sinfo))
+    | LOCEXP (e,_) -> tranExp e sinfo
+    | VARIABLE s -> s
     | CONSTANT (CONST_INT i) -> i
     | CONSTANT (CONST_FLOAT f) -> f
     | CONSTANT (CONST_STRING s) -> s
-    | CALL (fname, args) -> ("callcl "^(processFname fname args)^"("^ (tranExps args)^")")
-    | _ -> ""
+    | TYPE_SIZEOF (sp,dt) -> (
+            match sp with 
+              [se] -> (match se with 
+                         SpecType ts -> (
+                             match ts with 
+			       Tnamed tn -> string_of_int (structsize sinfo tn)
+                             | Tstruct (tn,_,_) -> string_of_int (structsize sinfo tn)
+			     | _ -> "" )
+                       | _ -> "" )
+	   )
+    | CALL (fname, args) -> ("callcl "^(tranFname fname)^"("^ (tranExps args sinfo)^")")
+    | _ ->  ""
       
 
 (*************************************************)
@@ -54,27 +75,31 @@ let rec tranTD ng = match ng with
        with  [] -> ""
             | name :: rnames -> tranDecl name  
 
-let tranStmt (s:statement) = match s with
-     COMPUTATION (e,_) -> ((tranExp e) ^ ";\n")
-    | _ -> "/**/"
+let tranStmt (s:statement) sinfo = match s with
+      COMPUTATION (e,_) -> ((tranExp e sinfo) ^ ";\n")
+    | DEFINITION dfn -> tranDfn dfn
+    | _ -> raise (Undefine "tranStmt")
 
-let rec tranStmts (sl: statement list) = match sl with
+let rec tranStmts (sl: statement list) sinfo = match sl with
       [] -> ""
-    |s::rs -> (tranStmt s) ^ (tranStmts rs)
+    |s::rs -> (tranStmt s sinfo) ^ (tranStmts rs sinfo)
 
-let tranBLK (b:block) = 
-   match b with {blabels=sl; battrs = al; bstmts = bs} -> tranStmts bs
+let tranBLK (b:block) sinfo = 
+   match b with {blabels=sl; battrs = al; bstmts = bs} -> tranStmts bs sinfo
 
-let transDef (dfn:definition) = 
+let transDef (dfn:definition) sinfo = 
   match dfn with 
     TYPEDEF (ng, _) -> tranTD ng
-  | FUNDEF ((s,(n,_,_,_)),b,_,_) -> ("fn "^n^"{\n"^(tranBLK b)^"\n}\n")
+  | FUNDEF ((s,(n,_,_,_)),b,_,_) -> ("fn "^n^"{\n"^(tranBLK b sinfo )^"\n}\n")
   | _ -> ""              
 
-let preprocessStruct (s: spec_elem) = 
+  let preprocessStruct (s: spec_elem) =
     match s with 
-      SpecType t -> (match t with
-                        Tstruct (sname, fields, _) -> [(sname,(match fields with None -> 0 | Some l -> (List.length l)))]
+      SpecType t ->  (match t with
+		       Tstruct (sname, fields, _) -> [(sname,
+						      (match fields with
+							 None ->  0
+						       | Some l -> (List.length l)))]
                       | _ -> [] 
                     )
     | _ -> []
@@ -97,12 +122,15 @@ let rec printLS ls = match ls with
       [] -> print_newline ()
     | (s,t) :: rs -> print_string s; print_string ": " ;print_int t; print_newline (); printLS rs
 
-let rec translation (ast: definition list) = 
-  structSize = ref (preprocess ast); 
+
+let rec trans (ast: definition list) sinfo = 
    match ast with 
     [] -> ""
-  | fdef :: rast -> (transDef fdef) ^ (translation rast)
+  | fdef :: rast -> (transDef fdef sinfo) ^ (trans rast sinfo)
 
+  let translation (ast: definition list) =
+    let sinfo = preprocess ast in 
+    trans ast sinfo
 
 
 

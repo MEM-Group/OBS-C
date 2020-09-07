@@ -3,3 +3,5 @@
 *.cmi
 *.cmo
 *-kompiled
+*.o
+*.cmx
