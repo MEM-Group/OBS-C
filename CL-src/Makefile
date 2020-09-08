@@ -1,7 +1,7 @@
 
 clang-kompiled: *.k
-	k/bin/kompile clang.k --backend ocaml
+	kompile clang.k --backend ocaml
 
 
 clean:
-	rm *~
+	rm *~ testm/*~
