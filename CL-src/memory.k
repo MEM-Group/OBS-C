@@ -59,16 +59,16 @@ rule <k> #lvdref(#pair(#stack(N:Int),CLKO:Int),FL) =>
 			#lvi(P,CLKOO,FL) ...  </k>
      <sloc> ... N |-> #lo(CLKOO => #RW(FL,CLKOO,CLK), #ref(P:Path)) ... </sloc>
      <clk> CLK:Int </clk>
-     requires notBool ((CLKO <=Int CLKOO) andBool
-                       (CLKOO <=Int CLK))
+     requires notBool ((CLKO <Int CLKOO) andBool
+                       (CLKOO <Int CLK))
 
 rule <k> #lvdref(#pair(#heap(N:Int,O:Int),CLKO:Int),FL) =>
                        #lvi(P,CLKOO,FL) ...  </k>
      <blocks> ... #heap(N,O) |-> #lo(CLKOO => #RW(FL,CLKOO,CLK), #ref(P:Path)) ...
      </blocks>
      <clk> CLK:Int </clk>
-     requires notBool ( (CLKO <=Int CLKOO) andBool
-                        (CLKOO <=Int CLK))
+     requires notBool ( (CLKO <Int CLKOO) andBool
+                        (CLKOO <Int CLK))
 
 syntax K ::= #lvField(K,Int,Int)  [strict]
 
@@ -80,16 +80,16 @@ rule <k> #lvField(#pair(#heap(A:Int,N:Int),CLKO:Int),H:Int, FL:Int)
      <blocks> ... #heap(A, N) |-> #lo((CLKOO:Int => #RW(FL,CLKOO,CLK)),#blk(B:Int))
               ... </blocks>
      <clk> CLK:Int </clk>
-     requires notBool ((CLKO <=Int CLKOO) andBool
-     	      	       (CLKOO <=Int CLK))
+     requires notBool ((CLKO <Int CLKOO) andBool
+     	      	       (CLKOO <Int CLK))
 
 rule <k> #lvField(#pair(#stack(L:Int),CLKO:Int),H:Int, FL:Int)
                => #pair(#heap(B, H),CLKOO )... </k>
      <sloc> ... L |-> #lo((CLKOO => #RW(FL,CLKOO,CLK)),#blk(B:Int))
               ... </sloc>
      <clk> CLK:Int </clk>
-     requires notBool ((CLKO <=Int CLKOO) andBool
-     	      	       (CLKOO <=Int CLK))
+     requires notBool ((CLKO <Int CLKOO) andBool
+     	      	       (CLKOO <Int CLK))
 
 
 syntax K ::= #writei(K,ValueCL)   [strict(1)]
@@ -111,13 +111,13 @@ rule <k> #read(P) => #readi(#lv(P,0)) ... </k>
 rule <k> #readi(#pair(#stack(L),CLKB)) => V ... </k>
      <sloc> ... L |-> #lo(CLKO,V) ...  </sloc>
      <clk> CLK:Int => CLK +Int 1 </clk>
-     requires (notBool ((CLKB <=Int CLKO) andBool (CLKO <=Int CLK)))
+     requires (notBool ((CLKB <Int CLKO) andBool (CLKO <Int CLK)))
      	      andBool (V =/=K #uninit(0))
 
 rule <k> #readi(#pair(#heap(A,N),CLKB)) => V ... </k>
      <blocks> ... #heap(A,N) |-> #lo(CLKO,V) ...  </blocks>
      <clk> CLK:Int => CLK +Int 1 </clk>
-     requires (notBool ((CLKB <=Int CLKO) andBool (CLKO <=Int CLK)))
+     requires (notBool ((CLKB <Int CLKO) andBool (CLKO <Int CLK)))
      	      andBool (V =/=K #uninit(0))
 
 syntax K ::= #freeBlk(Int,Int)
@@ -134,5 +134,15 @@ rule <k> #freeBlk(A,N) => #freeBlk(A,N -Int 1) ... </k>
 rule <k> #freeBlk(A,0) => #unit ... </k>
      <blocks> ... (#heap(A,0) |-> _) => .Map ... </blocks>
 
+syntax MemOp ::= #movei(K,K)    	  [strict(1)]
+
+rule #movei(V:ValueCL,P:Path) => #write(P,#uninit(0)) ~> V
+     requires (ValueIndex(V) ==K 6)
+
+rule #movei(V:ValueCL,P:Path) => V
+     requires (ValueIndex(V) =/=K 6)
+
+
+rule #move(P:Path) => #movei(#read(P),P)
 
 endmodule

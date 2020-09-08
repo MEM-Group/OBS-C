@@ -33,6 +33,20 @@ syntax ValueCL
 	 | #pair(Location,Int)
 	 | #slv(StackLoc)
 
+syntax Int ::= ValueIndex(ValueCL) [function]
+
+rule ValueIndex(I:Int) => 0
+rule ValueIndex(B:Bool) => 1
+rule ValueIndex(S:String) => 2
+rule ValueIndex(F:Float) => 3
+rule ValueIndex(#unit) => 4
+rule ValueIndex(cr(_)) => 5
+rule ValueIndex(B:BlkAddr) => 6
+rule ValueIndex(#ref(_)) => 7
+rule ValueIndex(#tid(_)) => 8
+rule ValueIndex(_:Uninit) => 9
+rule ValueIndex(#pair(_,_)) => 10
+rule ValueIndex(#slv(_)) => 11
 
 syntax Location
        ::= #heap(Int,Int)
@@ -65,6 +79,7 @@ syntax MemOp
 	 | #read(Path)
 	 | #write(Path, ValueCL)
          | #free(BlkAddr)
+ 	 | #move(Path)
 
 syntax MemOps
        ::= List{MemOp, ""}

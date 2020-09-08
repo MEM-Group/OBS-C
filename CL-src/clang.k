@@ -54,7 +54,7 @@ syntax CaseItem
        ::= "#caseItem2" "(" ExpCL ";" ExpCL ";" GuardedActions ")"              [strict(1)]
          | #caseItem(Bool,ExpCLs)
 
-rule case (I) of { EL:ExpCLs}  => #caseItem(I, EL)
+rule case B of { EL:ExpCLs}  => #caseItem(B, EL)
 rule #caseItem(true, _:ExpCL,EL:ExpCLs) => #caseItem(false, EL)
 rule #caseItem(false, E:ExpCL,EL:ExpCLs) => E
 rule #caseItem(true, #ValueCLs(E:ValueCL, EL:ValueCLs)) => #caseItem(false,EL)
@@ -173,196 +173,28 @@ rule <k> (X:Bool) && (Y:Bool) => (X andBool Y) ... </k>
 rule <k> (X:Bool) || (Y:Bool) => (X  orBool Y) ... </k>
 rule <k> (X:Int) & (Y:Int) => (X &Int Y) ... </k>
 
-rule assert(true) => #unit 
+rule assert(true) => #unit
+
+syntax ExpCL ::= #loop(ExpCL, ExpCL)
+
+rule <k> loop C:ExpCL {E:ExpCL} ~> RestPGM:K => #computeFB( #loop(C,E) ) </k>
+     <env> ENV:Map </env>
+     <clstack> .List => (ListItem(#state(RestPGM, ENV))) ... </clstack>
+     
+rule #loop(C,E) => if C then (E; #loop(C,E)) else skip
+
+rule skip => #unit
+
+rule <k> break ~> RestPGMOLD:K => RestPGM </k>
+     <env> _ => ENV </env>
+     <clstack> ListItem(#state(RestPGM, ENV:Map)) => .List ... </clstack>
+
+rule <k> move(E) => #move(#replaceVar(E,ENV)) ... </k>
+     <env> ENV:Map </env>
+
+rule deallocate(#blk(B:Int)) => #free(#blk(B))
 
 /*
-
-
-
-
-
-
-rule { E:ExpCL } => E
-
-
-
-
-
-syntax K
-       ::= #DESTRUCT(ValueCL)
-         | #destruct(Bool,K)
-
-rule <k> #DESTRUCT(V:ValueCL) => #destruct(termIndex(V) ==Int 100016, V) ... </k>
-
-
-rule <k> #destruct(true,#own(D)) => #free(D) ... </k>
-
-rule <k> #destruct(false,_) => . ... </k>
-
-rule <k> E1:ExpCL . E2:ExpCL  => #read(#replaceVar(E1 . E2, ENV)) ... </k> 
-     <env> ENV:Map </env>
-
-
-rule <k> * E:ExpCL => #read(#replaceVar(* E, ENV)) ... </k> 
-     <env> ENV:Map </env>
-
-
- 
-
-rule <k> fun ( P:Idents ) { E:ExpCL } => cr(C) ... </k>
-     (.Bag =>
-        <closure>
-           <crId> C </crId>
-           <crContext> .K </crContext>
-           <crParams> P </crParams>
-           <crBody> E </crBody>
-        </closure>
-     )
-     <closureCnt> C:Int => C +Int 1 </closureCnt>
-
-
-
-     
-rule <k> V:ValueCL ~> E2:ExpCL => #selectE(V =/=K #break, E2, .K) ... </k>
-     
-
-rule <k> #fname(F:Ident) => cr(I) ... </k>
-     <funclosure>  ... (F |-> I:Int) ...  </funclosure>
-     
-
-rule <k> #fname(F:Ident) => F ... </k>
-     <funclosure> Rho:Map  </funclosure>
-     
-rule <k> #fname(cr(I:Int)) => cr(I) ... </k>
-     
-
-rule <k> #fname(E1:ExpCL . E2:ExpCL) => E1 . E2 ... </k>
-     
-
-rule <k> #fname(* E:ExpCL) => * E ... </k>
-     
-
-
-rule #inSet(E:KItem, SetItem(E) Rest:Set) => true
-
-rule #inSet(E:K, .Set) => false
-rule #inSet(E:K, SetItem(E1) Rest:Set) => #inSet(E,Rest)
-     requires E =/=K E1
-
-
-
-
-syntax FName
-       ::= #fname(ExpCL)
-
-syntax ExpCL
-       ::= #callcl(KItem, ExpCLs)		[strict]
-
-rule <k> callcl(F:ExpCL,Es:ExpCLs) => #callcl(#fname(F),Es) ... </k>
-
-
-
-
-
-
-
-
-
-
-
-rule <k> #Index(E1:ExpCL,E2:ExpCL) => #read(#PArray(#replaceVar(E1,ENV),E2)) ... </k>
-     <env> ENV:Map </env>
-
-
-rule boolval(false) => (1)
-rule boolval(true)  => (0)
-
-
-
-
-
-
-rule <k> #ExpCLs(V:ValueCL, VL:ValueCLs) => #ValCLs(V, VL) ... </k>
-
-
-
-
-
-
-
-rule <k> E1:ExpCL :=cl E:ExpCL
-     	 => #writecl(#replaceVar(E1,ENV), E) ... </k>
-     <env> ENV:Map </env>
-
-
-rule <k> E1:ExpCL :=cl #uninit(0)
-     	 => #writecl(#replaceVar(E1,ENV), #uninit(0)) ... </k>
-     <env> ENV:Map </env>
-
-
-
-
-rule <k> #writecl(P:Path, V:ValueCL) => #write(P,V) ... </k>
-
-
-
-
-
-
-
-
-rule <k> refcl(I:Int,E:ExpCL) => #Brw(I,#replaceVar(E,ENV)) ... </k>
-     <env> ENV:Map </env>
-
-rule <k> assertcl((0)) => #unit ... </k>
-
-
-syntax ExpCL
-       ::= #Move(KItem,KItem)		[strict(1)]
-
-rule <k> #move(E:ExpCL) =>
-     	 #Move(#read(#replaceVar(E,ENV)),
-	 #write(#replaceVar(E,ENV),#uninit(0))) ... </k>
-     <env> ENV:Map </env>
-     requires ((termIndex(E) ==Int 10000) orBool (termIndex(E) ==Int 100021) orBool
-              (termIndex(E) ==Int 100022) orBool (termIndex(E) ==Int 100054))
-
-rule <k> #move(E) => E ... </k>
-     requires (notBool (
-     	      (termIndex(E) ==Int 10000) orBool (termIndex(E) ==Int 100021) orBool
-              (termIndex(E) ==Int 100022)
-     ))
-
-
-rule <k> #Move(V:ValueCL, WT:KItem) => WT ~> V ... </k>
-     <threadId> TID:Int </threadId>
-     <cthread> CTID:Int => #cThread(CTID,TID)  </cthread>
-     requires (TID ==Int CTID orBool CTID ==Int -1)
-              andBool termIndex(V) ==Int 100016
-
-rule <k> #Move(V:ValueCL, WT:KItem) => V ... </k>
-     requires andBool termIndex(V) =/=Int 100016
-
-
-
-
-rule #printStr(S:String,#ValCLs(V:ValueCL, Vs:ValueCLs))
-            => #printStr(replaceFirst(S,"{}", #valtoStr(V)), Vs) 
-
-rule #printStr(S:String, .ValueCLs) => S
-
-
-syntax String
-       ::= #valtoStr(ValueCL)                   [function]
-         | #printStr(String,ValueCLs)             [function]
-
-rule #valtoStr((I:Int)) => Int2String(I)
-rule #valtoStr((S:String)) => S
-
-rule <k> clskip => #unit ... </k>
-
-
-
 syntax ExpCL
        ::= #forkclInit(KItem,KItem,KItem)   [strict(2,3)]
 
@@ -436,208 +268,12 @@ rule <threadId> TID:Int </threadId>
 
 
 
-rule <k> #loop C:ExpCL {E:ExpCL} => case C of {E ; #loopstart(#loop C {E}), #unit} ... </k>
-
-
-rule <k> #break ~> #loop C:ExpCL {E:ExpCL} => #break ... </k>
-
-rule <k> #break ~> #loopstart(#loop C:ExpCL {E:ExpCL}) => #unit ... </k>
-
-rule <k> #loopstart(E:ExpCL) => E ... </k>
-
-
-rule <k> #break ~> let X:Ident = E:ExpCL => #break ... </k>
-
-rule <k> #break ~> E1:ExpCL ; E2:ExpCL => #break ~> E1 ~> E2 ... </k>
-
-rule <k> #break ~> X:Ident => #break ... </k>
-
-rule <k> #break ~> V:ValueCL => #break ... </k>
-
-rule <k> #break ~> #cvarcl(E:ExpCL) => #break ... </k>
-
-rule <k> #break ~> M:MemOps => #break ... </k>
-
-rule <k> #break ~> * E:ExpCL => #break ... </k>
-
-rule <k> #break ~> E:ExpCL . E1:ExpCL => #break ... </k>
-
-rule <k> #break ~> refcl(_,E:ExpCL) => #break ... </k>
-
-rule <k> #break ~> #refallocate(E:ExpCL) => #break ... </k>
-
-rule <k> #break ~> callcl(E:ExpCL,Es:ExpCLs) => #break ... </k>
-
-rule <k> #break ~> pcallcl(E1:ExpCL,E2:ExpCL,Es:ExpCLs) => #break ... </k>
-
-rule <k> #break ~> A:ArithExpCL => #break ... </k>
-
-rule <k> #break ~> E:ExpCL :=cl E1:ExpCL => #break ... </k>
-
-rule <k> #break ~> E:ExpCL :=cl E1:ExpCL => #break ... </k>
-
-rule <k> #break ~> F:FnCL => #break ... </k>
-
-rule <k> #break ~> (| E:ExpCL |) => #break ... </k>
-
-rule <k> #break ~> assertcl(E:ExpCL) => #break ... </k>
-
-rule <k> #break ~> clskip => #break ... </k>
-
-rule <k> #break ~> #move(E:ExpCL) => #break ... </k>
-
-rule <k> #break ~> #moveVal(E1:ExpCL, E2:ExpCL) => #break ... </k>
-
-rule <k> #break ~> S:StrExp => #break ... </k>
-
-rule <k> #break ~> #paniccl(E:ExpCL) => #break ... </k>
-
-rule <k> #break ~> #rawcl(E:ExpCL) => #break ... </k>
-
-rule <k> #break ~> #print(S:String,E:ExpCLs) => #break ... </k>
-
-rule <k> #break ~> #retcl(E2:ExpCL) => #break ... </k>
-
-rule <k> #break ~> #break => #break ... </k>
-
-
-rule <k> #refallocate(#own(B)) => #Shr(#sl(SA)) ... </k>
-     <sloc> SLOC:Map => SLOC[SA<- #own(B)] </sloc>
-     <slocAddr> SA:Int => SA +Int 1 </slocAddr>
-
-
-rule <k> pcallcl(E,E1,Es) => #pCallcl(E,E1,Es) ... </k>
-
-rule <k> #pCallcl((_:Int), F:Ident, Es:ExpCLs) =>  callcl(#cpath(i32,F), Es) ... </k>
-
-rule <k> #pCallcl(#own(#blk(B:Int)), F:Ident, Es:ExpCLs) => callcl(#cpath(#owner(T),F), Es) ... </k>
-     <blocks> ... B |-> #blkInfo(_,T) ... </blocks>
-
-
-syntax ExpCL
-       ::= #pCallcl(KItem,ExpCL,ExpCLs)		[strict(1)]
-
-rule <k> #pCallcl(#Shr(P:Path), F:Ident, ES:ExpCLs) => #pCallcl(#read(P),F,ES) ... </k>
-
-rule <k> #pCallcl(#Mut(P:Path), F:Ident, ES:ExpCLs) => #pCallcl(#read(P),F,ES) ... </k>
-
-
-
-
-syntax KCL
-       ::= #deAllocate(KItem)		[strict]
-
-rule <k> #deallocate(E:ExpCL) => #deAllocate(#lv(#replaceVar(E,ENV))) ... </k>
-     <env> ENV:Map </env>
-
-
-rule <k> #deAllocate(#pair(#sl(I:Int),(true))) => #free(#blk(B)) ... </k>
-     <sloc> ... I |-> #Raw(#heap(B:Int,0)) ... </sloc>
-
-
-rule <k> #deAllocate(#pair(#heap(B1,O),(true))) => #free(#blk(B)) ... </k>
-     <blocks> ... #heap(B1,O) |-> #Raw(#heap(B:Int,0)) ... </blocks>
-
-rule <k> #deAllocate(#pair(#Raw(#heap(B1,O)),(true))) => #free(#blk(B)) ... </k>
-     <blocks> ... #heap(B1,O) |-> #Raw(#heap(B:Int,0)) ... </blocks>
-
 
 rule <k> #AllocateInit((N:Int),T:CoreTy, Vs:ValueCLs) => #allocateInit((N),T,Vs) ... </k>
 
 rule <k> #AllocateInitRaw((N:Int),T:CoreTy, Vs:ValueCLs) => #allocateInitRaw((N),T,Vs) ... </k>
 
 rule <k> #Allocate((N:Int),T:CoreTy) => #allocate((N),T) ... </k>
-
-
-rule <k> #RawCL(#Shr(#sl(L))) => #Raw(#sl(L)) ... </k>
-
-rule <k> #RawCL(#Mut(#sl(L))) => #Raw(#sl(L)) ... </k>
-
-rule <k> #RawCL(#own(#blk(B:Int))) => #Raw(#heap(0,0)) ... </k>
-
-
-syntax KItem
-       ::= #ret(KItem)		[strict]
-
-rule <k> #retcl(E:ExpCL) => #ret(E) ... </k>
-
-
-rule <k> #ret(V:ValueCL) =>  #ret(V) ... </k>
-     <clstack> ListItem(Rho:Map) => .List ... </clstack>
-
-
-rule <k> #ret(V:ValueCL) ~> _:K => #computeFB(V) </k>
-     <env> _ => ENV </env>
-     <clstack> ListItem(#state(RestPGM:K,ENV:Map)) ... </clstack>
-
-
-rule <k> #ret(V:ValueCL) => #free(V1) ~> #ret(V) ... </k>
-     <env> ... ((X |-> #sl(L:Int)) => .Map) ...  </env>
-     <clstack> ListItem(X:Ident) => .List ... </clstack>
-     <sloc> ... ((L |-> #own(V1)) => .Map) ... </sloc>
-
-
-rule <k> #ret(V:ValueCL) => #ret(V) ... </k>
-     <env> ... ((X |-> #sl(L:Int)) => .Map) ...  </env>
-     <clstack> ListItem(X:Ident) => .List ... </clstack>
-     <sloc> ... ((L |-> V1) => .Map) ... </sloc>
-     requires(termIndex(V1) =/=Int 100016)
-
-
-rule #list2Set(.List) => .Set
-rule #list2Set(ListItem(E) L:List) => SetItem(E) #list2Set(L)
-
-rule #unit ~> #ret(V:ValueCL) => #ret(V)
-
-
-syntax ExpCL
-       ::= #Memcopy(KItem,KItem,ExpCL)  [seqstrict(1,2)]
-
-rule <k> #memcopy(E1:ExpCL, E2:ExpCL, (N:Int))
-             => #Memcopy(E1, E2, (N)) ...  </k>
-     <env> ENV:Map </env>
-     
-syntax ExpCL
-       ::=#memcpyI(KItem,KItem)	[strict(2)]
-
-
-
-rule <k> #Memcopy(#Raw(#heap(B1:Int,I1:Int)), #Raw(#heap(B2:Int,I2:Int)), (N:Int))
-     => #memcpyI(#heap(B2,I2),#readna(#heap(B1,I1)))
-                 ~> #Memcopy(#Raw(#heap(B1,I1+Int 1)),
-		            #Raw(#heap(B2, I2+Int 1)), (N-Int 1)) ... </k>
-     requires (N >Int 0)
-
-rule #Memcopy(_,_,(N:Int)) => #unit
-     requires N <=Int 0
-
-rule #memcpyI(#heap(B1:Int,I1:Int),V:ValueCL) => #writena(#heap(B1,I1),V)
-
-syntax ExpCL
-       ::= #Reallocate(KItem,Int,Int)
-
-rule <k> #reallocate(#Raw(#heap(B:Int,O:Int)), (N:Int)) => 
-			   #Reallocate(#heap(B,O), N1, N) ... </k>
-     <blocks> ... B |-> #blkInfo((N1:Int => N),_)   ... </blocks>
-
-syntax Map
-       ::= #CStoreI(Int,Int,Int)		[function]
-
-rule #CStoreI(B:Int,I:Int,N:Int) => (#heap(B,I) |-> #uninit(0)) #CStoreI(B,I +Int 1, N)
-     requires I <Int N
-     
-rule #CStoreI(B:Int,N:Int,N:Int) => .Map
-
-
-rule <k> #Reallocate(#heap(B:Int,O:Int), N1:Int,N2:Int) => #unit  ... </k>
-     <blocks> .Map => #heap(B,N1) |-> #uninit(0) ... </blocks>
-     <memStatus> .Map => #heap(B,N1) |-> #ms(0,0) ...  </memStatus>
-
-rule <k> #Reallocate(#heap(B:Int,O:Int), N1:Int,N2:Int) => #unit  ... </k>
-
-
-rule #offset(#Raw(#heap(B:Int,O:Int)), (L:Int)) => #Raw(#heap(B,O +Int L))
-
 */
 
 endmodule

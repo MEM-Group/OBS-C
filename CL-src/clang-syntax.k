@@ -29,7 +29,7 @@ syntax ExpCL
 	 | "{" ExpCL "}"			        [klabel(blockcl)]
 	 | ( ExpCL )				        [bracket]
 	 | "assert" "(" ExpCL ")"		        [klabel(#assertcl), strict]
-	 | "clskip"
+	 | "skip"
 	 | move(ExpCL)
 	 | panic(ExpCL)			                [strict]
 	 | print(ExpCL) 			        [strict]
@@ -37,10 +37,10 @@ syntax ExpCL
 	 | "loop" ExpCL "{" ExpCL "}"		        [klabel(#loopcl)]
 	 | "break"
 	 | wait(ExpCL)				        [strict]
-	 | deallocate(ExpCL)
+	 | deallocate(ExpCL)				[strict]
 	 | "destructThread"
 	 | forkcl(ExpCL)		                [strict]
-	 | "case" ExpCL "of" "{" ExpCLs "}"	        [strict(1),klabel(#casecl1)]
+	 | "case" ExpCL "of" "{" ExpCLs "}"	        [strict(1)]
 	 | "case" "{" GuardedActions  "}"	        [klabel(#casecl2)]
 
 syntax Ident ::= Id
