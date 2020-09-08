@@ -84,12 +84,23 @@ let current = ref dummyinfo
 
 let rem_quotes str = String.sub str 1 ((String.length str) - 2)
 
+let split_char_on sep s =
+  let r = ref [] in
+  let j = ref (String.length s) in
+  for i = String.length s - 1 downto 0 do
+    if String.get s i = sep then begin
+      r := String.sub s (i + 1) (!j - i - 1) :: !r;
+      j := i
+    end
+  done;
+  String.sub s 0 !j :: !r
+
 (* Change \ into / in file names. To avoid complications with escapes *)
 let cleanFileName str =
   let str1 =
     if str <> "" && String.get str 0 = '"' (* '"' ( *)
     then rem_quotes str else str in
-  String.concat "" (String.split_on_char '\\' str1)
+  String.concat "" (split_char_on '\\' str1)
 
 let readingFromStdin = ref false
 

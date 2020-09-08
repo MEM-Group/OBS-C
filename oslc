@@ -1,4 +1,4 @@
 #!/bin/bash
 
-C2CL/cparser $1 | krun 
+C2CL/cparser $1 | krun -d CL-src/
 
