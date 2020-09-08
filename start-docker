@@ -4,3 +4,6 @@ docker run -it --rm \
   -v $(pwd -P):/home/user/ws \
   -w /home/user/ws \
   ubuntu-k
+
+
+# eval `opam config env` 

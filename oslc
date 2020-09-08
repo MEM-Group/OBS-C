@@ -1,0 +1,4 @@
+#!/bin/bash
+
+C2CL/cparser $1 | krun 
+
